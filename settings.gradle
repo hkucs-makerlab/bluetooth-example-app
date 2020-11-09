@@ -1,0 +1,3 @@
+include ':exampleApp'
+include ':libBT'
+//rootProject.name = "BluetootControlExample"

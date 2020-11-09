@@ -1,0 +1,179 @@
+package com.makerlab.example.ui;
+
+import android.os.Bundle;
+import android.util.Log;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.AdapterView;
+import android.widget.Button;
+
+import androidx.fragment.app.Fragment;
+
+import com.makerlab.bt.BluetoothConnect;
+import com.makerlab.example.protocol.GoBLE;
+import com.makerlab.example.protocol.PlainTextProtocol;
+import com.makerlab.example.widgets.ProtocolSelectSpinner;
+
+import java.util.LinkedList;
+import java.util.Queue;
+import java.util.Timer;
+import java.util.TimerTask;
+
+public class MainFragmentControl extends Fragment implements
+        View.OnClickListener, AdapterView.OnItemSelectedListener {
+    static private String LOG_TAG = MainFragmentControl.class.getSimpleName();
+    static public final boolean D = BuildConfig.DEBUG;
+    static final int PROTOCOL_GOBLE = 1;
+    static final int PROTOCOL_PLAIN_TEXT = 0;
+    private BluetoothConnect mBluetoothConnect;
+    private Timer mDataSendTimer = null;
+    private int mProtocolId = -1;
+    private GoBLE mGoBLE;
+    private PlainTextProtocol mPlainTextProtocol;
+    private Queue<byte[]> mQueue = new LinkedList<>();
+    private final int buttionID[] = {
+            0, // dummy value
+            R.id.forwardButton, R.id.rightButton,
+            R.id.backwardButton, R.id.leftButton,
+            R.id.centerButton
+    };
+
+    public MainFragmentControl() {
+        // Required empty public constructor
+    }
+
+    public static MainFragmentControl newInstance() {
+        return new MainFragmentControl();
+    }
+
+    public void onCreate(Bundle saveInstanceState) {
+        super.onCreate(saveInstanceState);
+        Log.e(LOG_TAG, "onCreate()");
+        mGoBLE = new GoBLE();
+        mPlainTextProtocol = new PlainTextProtocol();
+    }
+
+    @Override
+    public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+        final View rootView = inflater.inflate(R.layout.fragment_main_control, container, false);
+        for (int i = 1; i < buttionID.length; i++) {
+            Button button = rootView.findViewById(buttionID[i]);
+            if (button != null) {
+                button.setOnClickListener(this);
+            }
+            Log.e(LOG_TAG, "onCreateView()");
+        }
+        ProtocolSelectSpinner protocolSpinner = rootView.findViewById(R.id.protocolSpinner);
+        protocolSpinner.setOnItemSelectedListener(this);
+        return rootView;
+    }
+
+    @Override
+    public void onStart() {
+        super.onStart();
+        MainActivity activity = (MainActivity) getActivity();
+        mBluetoothConnect = activity.getBluetoothConnect();
+        mDataSendTimer = new Timer();
+        mDataSendTimer.scheduleAtFixedRate(new DataSendTimerTask(), 1000, 250);
+        if (D)
+            Log.e(LOG_TAG, "onStart()");
+    }
+
+    @Override
+    public void onStop() {
+        super.onStop();
+        if (mDataSendTimer != null) {
+            mDataSendTimer.cancel();
+        }
+        mBluetoothConnect = null;
+        if (D)
+            Log.e(LOG_TAG, "onStop()");
+    }
+
+    @Override
+    public void onClick(View view) {
+        //view.setEnabled(false);
+        int buttonClicked = -1;
+        for (int i = 1; i <  buttionID.length; i++) {
+            if (view.getId() == buttionID[i]) {
+                buttonClicked = i;
+                break;
+            }
+        }
+        //view.setEnabled(true);
+
+        synchronized (mQueue) {
+            switch (mProtocolId) {
+                case PROTOCOL_PLAIN_TEXT:
+                    mQueue.add(mPlainTextProtocol.getPayload(buttonClicked));
+                    mQueue.add(mPlainTextProtocol.getPayload(0));
+                    if (D)
+                        Log.e(LOG_TAG, "onClick() : button clicked " +buttonClicked);
+                    break;
+                case PROTOCOL_GOBLE:
+                    byte[] buttonMap={0,1,2,3,4,7}; // remap the buttonID
+                    byte[] buttonPressed = {buttonMap[buttonClicked]};
+                    // move at one interval for  button pressed
+                    mQueue.add(mGoBLE.getPayload(127, 127, buttonPressed));
+                    // stop at next interval for button released
+                    mQueue.add(mGoBLE.getPayload(127, 127, null));
+                    if (D)
+                        Log.e(LOG_TAG, "onClick() : button clicked " + buttonMap[buttonClicked]);
+                    break;
+                default:
+                    if (D)
+                        Log.e(LOG_TAG, "onClick() : protocol not implemented!");
+            }
+        }
+
+    }
+
+    //AdapterView.OnItemSelectedListener of spinner view
+    @Override
+    public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+        switch (position) {
+            case PROTOCOL_PLAIN_TEXT:
+                synchronized (mQueue) {
+                    mQueue.clear();
+                    mProtocolId = PROTOCOL_PLAIN_TEXT;
+                }
+                break;
+            case PROTOCOL_GOBLE:
+                synchronized (mQueue) {
+                    mQueue.clear();
+                    mProtocolId = PROTOCOL_GOBLE;
+                }
+                break;
+            default:
+                mProtocolId=-1;
+        }
+        if (D)
+            Log.e(LOG_TAG, "onItemSelected()");
+    }
+
+    //AdapterView.OnItemSelectedListener of spinner view
+    @Override
+    public void onNothingSelected(AdapterView<?> parent) {
+
+    }
+
+    class DataSendTimerTask extends TimerTask {
+        private String LOG_TAG = DataSendTimerTask.class.getSimpleName();
+
+        @Override
+        public void run() {
+            if (mBluetoothConnect == null) {
+                return;
+            }
+            synchronized (mQueue) {
+                if (!mQueue.isEmpty()) {
+                    mBluetoothConnect.send(mQueue.remove());
+                    Log.e(LOG_TAG, "DataSendTimerTask.run() - send");
+                }
+            }
+        }
+    }
+}
+
+
