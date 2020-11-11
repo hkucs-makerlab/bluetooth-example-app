@@ -16,7 +16,8 @@ public class PlainTextProtocol {
         byte[] payload=null;
         if (i < messages.length && i>=0) {
             try {
-                payload = messages[i].getBytes("iso8859-1");
+                String data=messages[i]+"\r\n";
+                payload = data.getBytes("iso8859-1");
             } catch (UnsupportedEncodingException e) {}
         }
         return payload;

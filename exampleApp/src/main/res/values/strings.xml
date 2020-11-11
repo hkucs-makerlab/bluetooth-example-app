@@ -4,6 +4,7 @@
         <item>Simply Text</item>
         <item>GoBLE</item>
         <item>Vorpal</item>
-        <item>G-Code</item>
+        <item>Robot Arm G-Code</item>
+        <item>DrawBot G-Code</item>
     </string-array>
 </resources>
