@@ -11,6 +11,7 @@ import android.widget.Button;
 import androidx.fragment.app.Fragment;
 
 import com.makerlab.bt.BluetoothConnect;
+import com.makerlab.example.protocol.DrawBotScaraGcode;
 import com.makerlab.example.protocol.GoBLE;
 import com.makerlab.example.protocol.PlainTextProtocol;
 import com.makerlab.example.protocol.Protocol;
@@ -33,6 +34,7 @@ public class MainFragmentControl extends Fragment implements
     private GoBLE mGoBLE;
     private PlainTextProtocol mPlainTextProtocol;
     private Vorpal mVorpal;
+    private DrawBotScaraGcode mDrawBot;
     private Queue<byte[]> mQueue = new LinkedList<>();
     private final int buttionID[] = {
             0, // dummy value
@@ -55,6 +57,8 @@ public class MainFragmentControl extends Fragment implements
         mGoBLE = new GoBLE();
         mVorpal = new Vorpal();
         mPlainTextProtocol = new PlainTextProtocol();
+        mDrawBot = new DrawBotScaraGcode();
+
     }
 
     @Override
@@ -98,24 +102,23 @@ public class MainFragmentControl extends Fragment implements
     public void onClick(View view) {
         //view.setEnabled(false);
         int buttonClicked = -1;
-        for (int i = 1; i <  buttionID.length; i++) {
+        for (int i = 1; i < buttionID.length; i++) {
             if (view.getId() == buttionID[i]) {
                 buttonClicked = i;
                 break;
             }
         }
         //view.setEnabled(true);
-
         synchronized (mQueue) {
             switch (mProtocolId) {
                 case Protocol.PLAIN_TEXT:
                     mQueue.add(mPlainTextProtocol.getPayload(buttonClicked));
                     mQueue.add(mPlainTextProtocol.getPayload(0));
                     if (D)
-                        Log.e(LOG_TAG, "onClick() : plaintext : button clicked " +buttonClicked);
+                        Log.e(LOG_TAG, "onClick() : plaintext : button clicked " + buttonClicked);
                     break;
                 case Protocol.GOBLE:
-                    final byte[] buttonMap={0,1,2,3,4,7}; // remap the buttonID
+                    final byte[] buttonMap = {0, 1, 2, 3, 4, 7}; // remap the buttonID
                     byte[] buttonPressed = {buttonMap[buttonClicked]};
                     // move at one interval for  button pressed
                     mQueue.add(mGoBLE.getPayload(127, 127, buttonPressed));
@@ -125,14 +128,46 @@ public class MainFragmentControl extends Fragment implements
                         Log.e(LOG_TAG, "onClick() : goble : button clicked " + buttonMap[buttonClicked]);
                     break;
                 case Protocol.VORPAL:
-                    final byte[][]locomotions={null,mVorpal.goForward(), mVorpal.goRight(),
-                            mVorpal.goBackward(),mVorpal.goLeft(),
+                    final byte[][] locomotions = {null, mVorpal.goForward(), mVorpal.goRight(),
+                            mVorpal.goBackward(), mVorpal.goLeft(),
                             mVorpal.stomp()};
-                    if (locomotions[buttonClicked]!=null) {
+                    if (locomotions[buttonClicked] != null) {
                         mQueue.add(locomotions[buttonClicked]);
                     }
                     if (D)
-                        Log.e(LOG_TAG, "onClick() : vorpal : button clicked " +buttonClicked);
+                        Log.e(LOG_TAG, "onClick() : vorpal : button clicked " + buttonClicked);
+                    break;
+                case Protocol.DrawBotScaraGcode:
+                    int feedrate=800;
+                    int interval=10;
+                    if (buttonClicked < 5) {
+                        mQueue.add(mDrawBot.setRelativePositioning());
+                    }
+                    switch (buttonClicked) {
+                        case 1:
+                            mQueue.add(mDrawBot.moveY(interval, feedrate));
+                            break;
+                        case 2:
+                            mQueue.add(mDrawBot.moveX(interval, feedrate));
+                            break;
+                        case 3:
+                            mQueue.add(mDrawBot.moveY(-interval, feedrate));
+                            break;
+                        case 4:
+                            mQueue.add(mDrawBot.moveX(-interval, feedrate));
+                            break;
+                        case 5:
+                            byte[][] gcodes = mDrawBot.goHomePosition();
+                            for (int i = 0; i < gcodes.length; i++) {
+                                mQueue.add(gcodes[i]);
+                            }
+                            break;
+                    }
+                    if (buttonClicked < 5) {
+                        mQueue.add(mDrawBot.setAbsolutePositioning());
+                    }
+                    if (D)
+                        Log.e(LOG_TAG, "onClick() : drawbot : button clicked " + buttonClicked);
                     break;
                 default:
                     if (D)
@@ -148,16 +183,20 @@ public class MainFragmentControl extends Fragment implements
         synchronized (mQueue) {
             switch (position) {
                 case Protocol.PLAIN_TEXT:
-                        mQueue.clear();
-                        mProtocolId = Protocol.PLAIN_TEXT;
+                    mQueue.clear();
+                    mProtocolId = Protocol.PLAIN_TEXT;
                     break;
                 case Protocol.GOBLE:
-                        mQueue.clear();
-                        mProtocolId = Protocol.GOBLE;
+                    mQueue.clear();
+                    mProtocolId = Protocol.GOBLE;
                     break;
                 case Protocol.VORPAL:
-                        mQueue.clear();
-                        mProtocolId = Protocol.VORPAL;
+                    mQueue.clear();
+                    mProtocolId = Protocol.VORPAL;
+                    break;
+                case Protocol.DrawBotScaraGcode:
+                    mQueue.clear();
+                    mProtocolId = Protocol.DrawBotScaraGcode;
                     break;
                 default:
                     mProtocolId = -1;
