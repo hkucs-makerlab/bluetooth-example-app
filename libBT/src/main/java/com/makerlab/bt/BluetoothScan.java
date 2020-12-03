@@ -137,7 +137,9 @@ public class BluetoothScan {
         while (loop.hasNext()) {
             BluetoothDevice remoteDevice = loop.next();
             BluetoothClass btClass = remoteDevice.getBluetoothClass();
-            if (btClass.getMajorDeviceClass() == BluetoothClass.Device.Major.UNCATEGORIZED) {
+            //Log.e(LOG_TAG, "addClassicBtPairedDevices()"+remoteDevice.getName()+", "+btClass.getMajorDeviceClass());
+            if (btClass.getMajorDeviceClass() == BluetoothClass.Device.Major.UNCATEGORIZED ||
+                    btClass.getMajorDeviceClass() == BluetoothClass.Device.Major.COMPUTER) {
                 mBluetoothDeviceMap.put(remoteDevice.getAddress(), remoteDevice);
                 if (handler != null) {
                     handler.setResult(remoteDevice);
@@ -188,7 +190,8 @@ public class BluetoothScan {
             if (remoteDevice != null) {
                 mBluetoothDeviceMap.put(remoteDevice.getAddress(), remoteDevice);
                 BluetoothClass btClass = remoteDevice.getBluetoothClass();
-                if (btClass.getMajorDeviceClass() == BluetoothClass.Device.Major.UNCATEGORIZED) {
+                if (btClass.getMajorDeviceClass() == BluetoothClass.Device.Major.UNCATEGORIZED ||
+                        btClass.getMajorDeviceClass() == BluetoothClass.Device.Major.COMPUTER) {
                     if (handler != null) {
                         handler.setResult(remoteDevice);
                     }
