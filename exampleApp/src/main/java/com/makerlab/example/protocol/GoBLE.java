@@ -2,8 +2,12 @@ package com.makerlab.example.protocol;
 
 import android.util.Log;
 
+import com.makerlab.example.ui.BuildConfig;
+
 public class GoBLE {
-    private boolean mRepeat = true;
+    static private String LOG_TAG = GoBLE.class.getSimpleName();
+    static public final boolean D = BuildConfig.DEBUG;
+    private boolean mRepeat = false;
     private int mPrevChecksum = -1;
 
     public GoBLE() {
@@ -12,7 +16,6 @@ public class GoBLE {
     public void setRepeat(boolean flag) {
         mRepeat = flag;
     }
-
 
     public byte[] getPayload(int xPos, int yPos, byte[] mButtonPressed) {
         byte[] payload = {
@@ -33,7 +36,8 @@ public class GoBLE {
             size = (byte) mButtonPressed.length;
         }
         if (size > 0) { // if button pressed, data len will be dynamic
-            Log.e("buttons",String.valueOf(mButtonPressed.length));
+            if (D)
+                Log.e(LOG_TAG, "buttons pressed - " + String.valueOf(mButtonPressed.length));
             payload = new byte[size + payload.length];
             //
             payload[payloadIndex++] = 0x55;
@@ -66,7 +70,11 @@ public class GoBLE {
         }
         checksum = (checksum % 256);
         payload[payloadIndex] = (byte) checksum; // checksum
+        payload[payloadIndex] = (byte) checksum; // checksum
+        if (!mRepeat && checksum == mPrevChecksum) {
+            return null;
+        }
+        mPrevChecksum = checksum;
         return payload;
     }
-
 }
