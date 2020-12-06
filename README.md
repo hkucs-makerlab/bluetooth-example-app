@@ -18,4 +18,4 @@ This app is written in the way to demo
 
 ### References for Android BlueTooth API:
 * [Bluetooth Classic vs. Bluetooth Low Energy (BLE) on Android](https://www.thedroidsonroids.com/blog/bluetooth-classic-vs-bluetooth-low-energy-ble)
-* Book: [Professional Android, 4th Edition](https://www.programmer-books.com/professional-android-4th-edition-pdf/) - chapter 16
+* Book: [Professional Android, 4th Edition](https://www.programmer-books.com/professional-android-4th-edition-pdf/) - [chapter 16](https://www.programmer-books.com/wp-content/uploads/2018/07/professional-android-4th-edition-pdf.pdf)
