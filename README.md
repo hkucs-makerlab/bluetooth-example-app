@@ -1,5 +1,6 @@
 # bluetooth-example-app
 
+### Introduction:
 This app is written in the way to demo 
 
 * multiple modules in android studio project - exampleApp and libBT
@@ -14,3 +15,7 @@ This app is written in the way to demo
 * using share perferences for storing activtie lifecycle states - keeping bluetooth connection while activitys are started and destroyed
 * using BlueTooth SPP and BLE API
 * using Log for debugging - android studio logcat
+
+### References for Android BlueTooth API:
+* [Bluetooth Classic vs. Bluetooth Low Energy (BLE) on Android](https://www.thedroidsonroids.com/blog/bluetooth-classic-vs-bluetooth-low-energy-ble)
+* Book: [Professional Android, 4th Edition](https://www.programmer-books.com/professional-android-4th-edition-pdf/) - chapter 16
