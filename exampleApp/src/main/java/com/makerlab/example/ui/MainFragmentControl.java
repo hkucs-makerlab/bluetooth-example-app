@@ -40,7 +40,8 @@ public class MainFragmentControl extends Fragment implements
             0, // dummy value
             R.id.forwardButton, R.id.rightButton,
             R.id.backwardButton, R.id.leftButton,
-            R.id.centerButton
+            R.id.centerButton, R.id.portraitButton,
+            R.id.landscapeRightButton, R.id.landscapeLeftButton,
     };
 
     public MainFragmentControl() {
@@ -118,7 +119,7 @@ public class MainFragmentControl extends Fragment implements
                         Log.e(LOG_TAG, "onClick() : plaintext : button clicked " + buttonClicked);
                     break;
                 case Protocol.GOBLE:
-                    final byte[] buttonMap = {0, 1, 2, 3, 4, 7}; // remap the buttonID
+                    final byte[] buttonMap = {0, 1, 2, 3, 4, 7, 8, 11, 12}; // remap the buttonID
                     byte[] buttonPressed = {buttonMap[buttonClicked]};
                     // move at one interval for  button pressed
                     mQueue.add(mGoBLE.getPayload(127, 127, buttonPressed));
@@ -131,15 +132,15 @@ public class MainFragmentControl extends Fragment implements
                     final byte[][] locomotions = {null, mVorpal.goForward(), mVorpal.goRight(),
                             mVorpal.goBackward(), mVorpal.goLeft(),
                             mVorpal.stomp()};
-                    if (locomotions[buttonClicked] != null) {
+                    if (buttonClicked >=0 && buttonClicked<locomotions.length && locomotions[buttonClicked] != null) {
                         mQueue.add(locomotions[buttonClicked]);
                     }
                     if (D)
                         Log.e(LOG_TAG, "onClick() : vorpal : button clicked " + buttonClicked);
                     break;
                 case Protocol.DrawBotScaraGcode:
-                    int feedrate=800;
-                    int interval=10;
+                    int feedrate = 800;
+                    int interval = 10;
                     if (buttonClicked < 5) {
                         mQueue.add(mDrawBot.setRelativePositioning());
                     }
