@@ -33,8 +33,7 @@ public class MainActivity extends AppCompatActivity implements
     private SharedPreferences mSharedPref;
     private String mSharedPrefFile = "com.makerlab.omni.sharedprefs";
     //
-    private MainFragmentControl mainFragmentControl;
-    private FragmentManager fragmentManager = getSupportFragmentManager();
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -50,12 +49,8 @@ public class MainActivity extends AppCompatActivity implements
             mBluetoothScan = new BluetoothScan(this);
             BluetoothDevice mBluetoothDevice = mBluetoothScan.getBluetoothDevice(bluetothDeviceAddr);
             mBluetoothConnect.connectBluetooth(mBluetoothDevice);
-        } else {
-            // Log.e(LOG_TAG, "onCreate(): no share perference");
         }
         //
-        fragmentManager = getSupportFragmentManager();
-        mainFragmentControl = MainFragmentControl.newInstance();
     }
 
     @Override
@@ -206,19 +201,23 @@ public class MainActivity extends AppCompatActivity implements
     }
 
     private void displayControlFragment() {
+        MainFragmentControl mainFragmentControl = MainFragmentControl.newInstance();
         // hide the main activity layout
         final View view = findViewById(R.id.layout_main);
         view.setVisibility(View.INVISIBLE);
         //
-        FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
-        fragmentTransaction.add(R.id.container, mainFragmentControl).commit();
+        FragmentTransaction fragmentTransaction = getSupportFragmentManager().beginTransaction();
+        fragmentTransaction.replace(R.id.container, mainFragmentControl).commit();
         isFragmentDisplayed = true;
     }
 
     private void closeControlFragment() {
-        FragmentTransaction fragmentTransaction =
-                fragmentManager.beginTransaction();
-        fragmentTransaction.remove(mainFragmentControl).commit();
+        Fragment mainFragmentControl=getSupportFragmentManager().findFragmentById(R.id.container);
+        if (mainFragmentControl !=null) {
+            FragmentTransaction fragmentTransaction =
+                    getSupportFragmentManager().beginTransaction();
+            fragmentTransaction.remove(mainFragmentControl).commit();
+        }
         if (D)
             Log.e(LOG_TAG, "closeControlFragment() :");
 
