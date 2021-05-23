@@ -11,6 +11,7 @@ import android.view.View;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
 
@@ -30,7 +31,10 @@ public class MainActivity extends AppCompatActivity implements
     private boolean isFragmentDisplayed = false;
     private Menu mMenuSetting;
     private SharedPreferences mSharedPref;
-    private String mSharedPrefFile ="com.makerlab.omni.sharedprefs";
+    private String mSharedPrefFile = "com.makerlab.omni.sharedprefs";
+    //
+    private MainFragmentControl mainFragmentControl;
+    private FragmentManager fragmentManager = getSupportFragmentManager();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -49,6 +53,9 @@ public class MainActivity extends AppCompatActivity implements
         } else {
             // Log.e(LOG_TAG, "onCreate(): no share perference");
         }
+        //
+        fragmentManager = getSupportFragmentManager();
+        mainFragmentControl = MainFragmentControl.newInstance();
     }
 
     @Override
@@ -203,26 +210,18 @@ public class MainActivity extends AppCompatActivity implements
         final View view = findViewById(R.id.layout_main);
         view.setVisibility(View.INVISIBLE);
         //
-        MainFragmentControl mainFragmentControl = MainFragmentControl.newInstance();
-        FragmentManager fragmentManager = getSupportFragmentManager();
-        MainFragmentFrontPage f=(MainFragmentFrontPage)fragmentManager.findFragmentById(R.id.container);
         FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
         fragmentTransaction.add(R.id.container, mainFragmentControl).commit();
         isFragmentDisplayed = true;
     }
 
     private void closeControlFragment() {
-        FragmentManager fragmentManager = getSupportFragmentManager();
-        MainFragmentControl mainFragmentControl =
-                (MainFragmentControl) fragmentManager.findFragmentById(R.id.container);
-        if (mainFragmentControl != null) {
-            // Create and commit the transaction to remove the fragment.
-            FragmentTransaction fragmentTransaction =
-                    fragmentManager.beginTransaction();
-            fragmentTransaction.remove(mainFragmentControl).commit();
-            if (D)
-                Log.e(LOG_TAG, "closeControlFragment() :");
-        }
+        FragmentTransaction fragmentTransaction =
+                fragmentManager.beginTransaction();
+        fragmentTransaction.remove(mainFragmentControl).commit();
+        if (D)
+            Log.e(LOG_TAG, "closeControlFragment() :");
+
         isFragmentDisplayed = false;
         // show the main activity layout
         View view = findViewById(R.id.layout_main);
