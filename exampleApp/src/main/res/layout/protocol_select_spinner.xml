@@ -4,4 +4,4 @@
     android:layout_height="wrap_content"
     android:padding="10dp"
     android:text="Plain Text Protocol"
-    android:textSize="22sp" />
+    android:textSize="16sp" />
