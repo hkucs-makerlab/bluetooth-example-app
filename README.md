@@ -1,7 +1,7 @@
 # bluetooth-example-app
 
 ### Introduction:
-This app is written in the way to demo 
+This app is for the tutorial of writing an Android app using BlueTooth. It is written in the way to demo 
 
 * multiple modules in android studio project - exampleApp and libBT
 * multiple activites - main activity and scanning bluetooth device activity
@@ -15,6 +15,14 @@ This app is written in the way to demo
 * using share perferences for storing activtie lifecycle states - keeping bluetooth connection while activitys are started and destroyed
 * using BlueTooth SPP and BLE API
 * using Log for debugging - android studio logcat
+
+### Prerequisites:
+If you don't have any background on Android app development, you should complete the exercises of following tutorials before to study the code
+
+* [Constraint Layout Codelab](https://github.com/hkucs-makerlab/constraint-layout)
+* [Codelabs for Android Developer Fundamentals](https://developer.android.com/courses/fundamentals-training/toc-v2)
+* [Advanced Android course](https://developer.android.com/courses/advanced-training/toc), optional but highly recommend!
+
 
 ### References for Android BlueTooth API:
 * [Bluetooth Classic vs. Bluetooth Low Energy (BLE) on Android](https://www.thedroidsonroids.com/blog/bluetooth-classic-vs-bluetooth-low-energy-ble)
