@@ -28,7 +28,7 @@ public class MainActivity extends AppCompatActivity implements
 
     private BluetoothConnect mBluetoothConnect;
     private BluetoothScan mBluetoothScan;
-    private boolean isFragmentDisplayed = false;
+
     private Menu mMenuSetting;
     private SharedPreferences mSharedPref;
     private String mSharedPrefFile = "com.makerlab.omni.sharedprefs";
@@ -49,8 +49,12 @@ public class MainActivity extends AppCompatActivity implements
             mBluetoothScan = new BluetoothScan(this);
             BluetoothDevice mBluetoothDevice = mBluetoothScan.getBluetoothDevice(bluetothDeviceAddr);
             mBluetoothConnect.connectBluetooth(mBluetoothDevice);
+            if (D)
+                Log.e(LOG_TAG, "onCreate() - connecting bluetooth device");
+        } else {
+            if (D)
+                Log.e(LOG_TAG, "onCreate()");
         }
-        //
     }
 
     @Override
@@ -133,6 +137,8 @@ public class MainActivity extends AppCompatActivity implements
                 Toast.makeText(getApplicationContext(), "Connecting", Toast.LENGTH_SHORT).show();
             }
         });
+        if (D)
+            Log.e(LOG_TAG, "onConnect() - Connecting");
     }
 
     @Override
@@ -144,18 +150,15 @@ public class MainActivity extends AppCompatActivity implements
             Log.e(LOG_TAG, "onConnectionSuccess() - connected");
         runOnUiThread(new Thread() {
             public void run() {
-
-                if (!isFragmentDisplayed) {
-                    runOnUiThread(new Thread() {
-                        public void run() {
-                            if (mMenuSetting != null) {
-                                enableConnectMenuItem(false);
-                            }
-                            displayControlFragment();
-                            Toast.makeText(getApplicationContext(), "Connected", Toast.LENGTH_SHORT).show();
+                runOnUiThread(new Thread() {
+                    public void run() {
+                        Toast.makeText(getApplicationContext(), "Connected", Toast.LENGTH_SHORT).show();
+                        if (mMenuSetting != null) {
+                            enableConnectMenuItem(false);
                         }
-                    });
-                }
+                        displayControlFragment();
+                    }
+                });
             }
         });
     }
@@ -174,6 +177,7 @@ public class MainActivity extends AppCompatActivity implements
             Log.e(LOG_TAG, "onConnectionFail()");
         runOnUiThread(new Thread() {
             public void run() {
+                closeControlFragment();
                 Toast.makeText(getApplicationContext(), "Failed to connect!", Toast.LENGTH_LONG).show();
             }
         });
@@ -181,17 +185,15 @@ public class MainActivity extends AppCompatActivity implements
 
     @Override
     public void onDisconnected(BluetoothConnect instant) {
-        if (isFragmentDisplayed) {
-            runOnUiThread(new Thread() {
-                public void run() {
-                    closeControlFragment();
-                    enableConnectMenuItem(true);
-                }
-            });
-        }
-        if (mBluetoothConnect.isConnected()) {
-            mBluetoothConnect.disconnectBluetooth();
-        }
+        runOnUiThread(new Thread() {
+            public void run() {
+                Toast.makeText(getApplicationContext(), "Disconnected!", Toast.LENGTH_LONG).show();
+                closeControlFragment();
+                enableConnectMenuItem(true);
+            }
+        });
+        if (D)
+            Log.e(LOG_TAG, "onDisconnected()");
     }
 
     private void removeSharePerf() {
@@ -202,18 +204,18 @@ public class MainActivity extends AppCompatActivity implements
 
     private void displayControlFragment() {
         MainFragmentControl mainFragmentControl = MainFragmentControl.newInstance();
-        // hide the main activity layout
+        // hide the main activity layout containing static fragment
         final View view = findViewById(R.id.layout_main);
         view.setVisibility(View.INVISIBLE);
         //
         FragmentTransaction fragmentTransaction = getSupportFragmentManager().beginTransaction();
         fragmentTransaction.replace(R.id.container, mainFragmentControl).commit();
-        isFragmentDisplayed = true;
+
     }
 
     private void closeControlFragment() {
-        Fragment mainFragmentControl=getSupportFragmentManager().findFragmentById(R.id.container);
-        if (mainFragmentControl !=null) {
+        Fragment mainFragmentControl = getSupportFragmentManager().findFragmentById(R.id.container);
+        if (mainFragmentControl != null) {
             FragmentTransaction fragmentTransaction =
                     getSupportFragmentManager().beginTransaction();
             fragmentTransaction.remove(mainFragmentControl).commit();
@@ -221,8 +223,7 @@ public class MainActivity extends AppCompatActivity implements
         if (D)
             Log.e(LOG_TAG, "closeControlFragment() :");
 
-        isFragmentDisplayed = false;
-        // show the main activity layout
+        // show the main activity layout containing static fragment
         View view = findViewById(R.id.layout_main);
         view.setVisibility(View.VISIBLE);
     }
