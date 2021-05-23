@@ -14,14 +14,14 @@
             android:name="com.makerlab.ui.BluetoothDevListActivity"
             android:label="Scanning Bluetooth Devices"
             android:parentActivityName="com.makerlab.example.ui.MainActivity"
-            android:screenOrientation="portrait">
+            >
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"
                 android:value="com.makerlab.example.ui.MainActivity" />
         </activity>
         <activity
             android:name="com.makerlab.example.ui.MainActivity"
-            android:screenOrientation="portrait">
+            >
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
