@@ -1,5 +1,6 @@
 package com.makerlab.example.ui;
 
+import android.app.Activity;
 import android.bluetooth.BluetoothDevice;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -10,9 +11,12 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.Toast;
 
+import androidx.activity.result.ActivityResult;
+import androidx.activity.result.ActivityResultCallback;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.fragment.app.Fragment;
-import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
 
 import com.makerlab.bt.BluetoothConnect;
@@ -20,9 +24,9 @@ import com.makerlab.bt.BluetoothScan;
 import com.makerlab.ui.BluetoothDevListActivity;
 
 public class MainActivity extends AppCompatActivity implements
-        BluetoothConnect.ConnectionHandler {
+        BluetoothConnect.ConnectionHandler, ActivityResultCallback<ActivityResult> {
     static public final boolean D = BuildConfig.DEBUG;
-    static public final int REQUEST_BT_GET_DEVICE = 1112;
+//    static public final int REQUEST_BT_GET_DEVICE = 1112;
     static public final String BLUETOOT_REMOTE_DEVICE = "bt_remote_device";
     static private String LOG_TAG = MainActivity.class.getSimpleName();
 
@@ -33,7 +37,7 @@ public class MainActivity extends AppCompatActivity implements
     private SharedPreferences mSharedPref;
     private String mSharedPrefFile = "com.makerlab.omni.sharedprefs";
     //
-
+    ActivityResultLauncher<Intent> activityResultLauncher;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -55,6 +59,7 @@ public class MainActivity extends AppCompatActivity implements
             if (D)
                 Log.e(LOG_TAG, "onCreate()");
         }
+        activityResultLauncher = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), this);
     }
 
     @Override
@@ -83,8 +88,10 @@ public class MainActivity extends AppCompatActivity implements
             if (mBluetoothConnect.isConnected()) {
                 mBluetoothConnect.disconnectBluetooth();
             }
+
             Intent intent = new Intent(this, BluetoothDevListActivity.class);
-            startActivityForResult(intent, REQUEST_BT_GET_DEVICE);
+            activityResultLauncher.launch(intent);
+            //startActivityForResult(intent, REQUEST_BT_GET_DEVICE);
             return true;
         }
 
@@ -98,7 +105,22 @@ public class MainActivity extends AppCompatActivity implements
         return super.onOptionsItemSelected(item);
     }
 
+    public void onActivityResult(ActivityResult result) {
+        if (result.getResultCode() == Activity.RESULT_OK) {
+            Intent resultIntent = result.getData();
+            BluetoothDevice bluetoothDevice = resultIntent.getParcelableExtra(BluetoothDevListActivity.EXTRA_KEY_DEVICE);
+            if (bluetoothDevice != null) {
+                mBluetoothConnect.connectBluetooth(bluetoothDevice);
+                if (D)
+                    Log.e(LOG_TAG, "onActivityResult() - connecting");
+            }
+        } else if (result.getResultCode() == Activity.RESULT_CANCELED) {
+            if (D)
+                Log.e(LOG_TAG, "onActivityResult() - canceled");
+        }
+    }
 
+/*
     @Override
     public void onActivityResult(int requestCode, int resultCode, Intent resultIntent) {
         super.onActivityResult(requestCode, resultCode, resultIntent);
@@ -117,6 +139,7 @@ public class MainActivity extends AppCompatActivity implements
             }
         }
     }
+*/
 
     @Override
     protected void onDestroy() {
@@ -227,5 +250,6 @@ public class MainActivity extends AppCompatActivity implements
         View view = findViewById(R.id.layout_main);
         view.setVisibility(View.VISIBLE);
     }
+
 
 }
