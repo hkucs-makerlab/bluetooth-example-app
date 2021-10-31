@@ -19,6 +19,8 @@ import android.os.ParcelUuid;
 import androidx.core.app.ActivityCompat;
 import android.util.Log;
 
+import com.makerlab.ui.BuildConfig;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -31,6 +33,7 @@ public class BluetoothScan {
     static public final int REQUEST_BT_ENABLE = 22;
     static private String LOG_TAG =BluetoothScan.class.getSimpleName();
     static private ArrayList<ScanFilter> mServiceUUIDfilters;
+    static public final boolean D = BuildConfig.DEBUG;
     //
     private BluetoothAdapter mBluetoothAdapter;
     private BleScanCallback mBleScanCallback;
@@ -72,7 +75,7 @@ public class BluetoothScan {
             Intent intent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
             activity.startActivityForResult(intent, REQUEST_BT_ENABLE);
         } else {
-            requestBluetoothAccessPermission();
+
             bluetoothDevice = mBluetoothAdapter.getRemoteDevice(address);
         }
         return bluetoothDevice;
@@ -85,7 +88,9 @@ public class BluetoothScan {
             return false;
         }
         //
-        requestBluetoothAccessPermission();
+        ActivityCompat.requestPermissions(activity,
+                new String[] { Manifest.permission.ACCESS_FINE_LOCATION },
+                0);
         // for paired devices
         addClassicBtPairedDevices();
         // for classic SPP devices
@@ -102,7 +107,7 @@ public class BluetoothScan {
         // for BLE devices
         BluetoothLeScanner bluetoothLeScanner = mBluetoothAdapter.getBluetoothLeScanner();
         if (bluetoothLeScanner != null) {
-            //bluetoothLeScanner.startScan(mBleScanCallback);
+//           bluetoothLeScanner.startScan(mBleScanCallback);
             bluetoothLeScanner.startScan(mServiceUUIDfilters,
                     new ScanSettings.Builder().setScanMode(ScanSettings.CALLBACK_TYPE_ALL_MATCHES).build(),
                     mBleScanCallback);
@@ -113,6 +118,7 @@ public class BluetoothScan {
     }
 
     public void stop() {
+        Log.e(LOG_TAG, "stop()- Discovery stopped...");
         if (!mBluetoothAdapter.isEnabled()) return;
         // cancel BLE scanning
         mBluetoothAdapter.getBluetoothLeScanner().stopScan(mBleScanCallback);
@@ -148,16 +154,6 @@ public class BluetoothScan {
         }
     }
 
-    private void requestBluetoothAccessPermission() {
-        mPermssionGranted = ActivityCompat.checkSelfPermission(activity, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED;
-        if (!mPermssionGranted) {
-            String[] permissions = new String[]{
-                    Manifest.permission.ACCESS_COARSE_LOCATION,
-                    Manifest.permission.ACCESS_FINE_LOCATION
-            };
-            ActivityCompat.requestPermissions(activity, permissions, REQUEST_BT_PERMISSION);
-        }
-    }
 
     //
     public class ClassicBtDiscoveryCallback extends BroadcastReceiver {
@@ -167,10 +163,14 @@ public class BluetoothScan {
             String intentActon = intent.getAction();
 
             if (BluetoothAdapter.ACTION_DISCOVERY_STARTED.equals(intentActon)) {
-                Log.e(LOG_TAG, "onReceive() - Discovery Started...");
+                if (D) {
+                    Log.e(LOG_TAG, "onReceive() - Discovery Started...");
+                }
             } else if (BluetoothAdapter.ACTION_DISCOVERY_FINISHED.equals(intentActon)) {
                 mBluetoothAdapter.getBluetoothLeScanner().stopScan(mBleScanCallback);
-                Log.e(LOG_TAG, "onReceive() - Discovery Complete.");
+                if (D) {
+                    Log.e(LOG_TAG, "onReceive() - Discovery Complete.");
+                }
                 if (handler != null) {
                     handler.onPostResult();
                 }
@@ -209,10 +209,16 @@ public class BluetoothScan {
             BluetoothDevice remoteDevice = result.getDevice();
             String name = remoteDevice.getName();
             if (name != null) {
-                Log.e(LOG_TAG, "onScanResult() - "+remoteDevice.getName());
+                if (D) {
+                    Log.e(LOG_TAG, "onScanResult() called - found " + remoteDevice.getName());
+                }
                 mBluetoothDeviceMap.put(remoteDevice.getAddress(), remoteDevice);
                 if (handler != null) {
                     handler.setResult(remoteDevice);
+                }
+            } else {
+                if (D) {
+                    Log.e(LOG_TAG, "onScanResult() called");
                 }
             }
         }

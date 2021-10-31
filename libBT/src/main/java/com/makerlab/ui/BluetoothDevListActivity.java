@@ -15,7 +15,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.makerlab.bt.BluetoothScan;
-import com.makerlab.robotarm.protocol.R;
+
 
 public class BluetoothDevListActivity extends AppCompatActivity
         implements BluetoothScan.ResultHandler, View.OnClickListener {
