@@ -27,4 +27,5 @@ If you don't have any background on Android app development, you should complete
 ### References for Android BlueTooth API:
 * [Bluetooth Classic vs. Bluetooth Low Energy (BLE) on Android](https://www.thedroidsonroids.com/blog/bluetooth-classic-vs-bluetooth-low-energy-ble)
 * [Making Android BLE work](https://medium.com/@martijn.van.welie/making-android-ble-work-part-1-a736dcd53b02)
+* [The Ultimate Guide to Android Bluetooth Low Energy](https://punchthrough.com/android-ble-guide/)
 * Book: [Professional Android, 4th Edition](https://www.programmer-books.com/professional-android-4th-edition-pdf/) - [chapter 16](https://www.programmer-books.com/wp-content/uploads/2018/07/professional-android-4th-edition-pdf.pdf)
