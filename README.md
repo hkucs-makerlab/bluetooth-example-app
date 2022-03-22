@@ -21,7 +21,7 @@ If you don't have any background on Android app development, you should complete
 
 * [Constraint Layout Codelab](https://github.com/hkucs-makerlab/constraint-layout)
 * [Codelabs for Android Developer Fundamentals](https://developer.android.com/courses/fundamentals-training/toc-v2)
-* [Advanced Android course](https://developer.android.com/courses/advanced-training/toc)
+* [Codelabs for Advanced Android Development](https://developer.android.com/courses/advanced-training/toc)
 
 
 ### References for Android BlueTooth API:
