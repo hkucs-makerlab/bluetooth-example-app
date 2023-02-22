@@ -22,7 +22,7 @@
             android:layout_width="@dimen/button_width"
             android:layout_height="@dimen/button_height"
             android:layout_marginBottom="8dp"
-            android:text="Up/Forward"
+            android:text="@string/up_forward"
             app:layout_constraintBottom_toTopOf="@+id/centerButton"
             app:layout_constraintEnd_toEndOf="@+id/centerButton"
             app:layout_constraintStart_toStartOf="@+id/centerButton" />
@@ -32,7 +32,7 @@
             android:layout_width="@dimen/button_width"
             android:layout_height="@dimen/button_height"
             android:layout_marginStart="8dp"
-            android:text="Right"
+            android:text="@string/right"
             app:layout_constraintBaseline_toBaselineOf="@+id/centerButton"
             app:layout_constraintStart_toEndOf="@+id/centerButton" />
 
@@ -40,7 +40,7 @@
             android:id="@+id/centerButton"
             android:layout_width="@dimen/button_width"
             android:layout_height="@dimen/button_height"
-            android:text="Center"
+            android:text="@string/center"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintHorizontal_bias="0.5"
@@ -52,7 +52,7 @@
             android:layout_width="@dimen/button_width"
             android:layout_height="@dimen/button_height"
             android:layout_marginEnd="8dp"
-            android:text="Left"
+            android:text="@string/left"
             app:layout_constraintBaseline_toBaselineOf="@+id/centerButton"
             app:layout_constraintEnd_toStartOf="@+id/centerButton" />
 
@@ -61,7 +61,7 @@
             android:layout_width="@dimen/button_width"
             android:layout_height="@dimen/button_height"
             android:layout_marginTop="8dp"
-            android:text="Down/Backward"
+            android:text="@string/down_backward"
             app:layout_constraintEnd_toEndOf="@+id/centerButton"
             app:layout_constraintStart_toStartOf="@+id/centerButton"
             app:layout_constraintTop_toBottomOf="@+id/centerButton" />
@@ -71,7 +71,7 @@
             android:layout_width="@dimen/button_width"
             android:layout_height="@dimen/button_height"
             android:layout_marginTop="24dp"
-            android:text="portrait"
+            android:text="@string/portrait"
             app:layout_constraintEnd_toEndOf="@+id/backwardButton"
             app:layout_constraintStart_toStartOf="@+id/backwardButton"
             app:layout_constraintTop_toBottomOf="@+id/backwardButton" />
@@ -80,7 +80,7 @@
             android:id="@+id/landscapeLeftButton"
             android:layout_width="@dimen/button_width"
             android:layout_height="@dimen/button_height"
-            android:text="landscape left"
+            android:text="@string/landscape_left"
             android:textSize="12sp"
             app:layout_constraintBottom_toBottomOf="@+id/portraitButton"
             app:layout_constraintEnd_toStartOf="@+id/portraitButton"
@@ -90,7 +90,7 @@
             android:id="@+id/landscapeRightButton"
             android:layout_width="@dimen/button_width"
             android:layout_height="@dimen/button_height"
-            android:text="Landscape right"
+            android:text="@string/landscape_right"
             android:textSize="12sp"
             app:layout_constraintBottom_toBottomOf="@+id/portraitButton"
             app:layout_constraintEnd_toEndOf="parent"
@@ -102,6 +102,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginEnd="8dp"
+        android:minHeight="48dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.5"
@@ -114,7 +115,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="8dp"
-        android:text="Protocol: "
+        android:text="@string/protocol"
         android:textSize="24sp"
         android:textStyle="bold"
         app:layout_constraintBaseline_toBaselineOf="@+id/protocolSpinner"

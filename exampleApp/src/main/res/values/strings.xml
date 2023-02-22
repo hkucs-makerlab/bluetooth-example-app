@@ -1,5 +1,14 @@
 <resources>
     <string name="app_name">Example App To Use BlueTooth</string>
+    <string name="up_forward">Up/Forward</string>
+    <string name="right">Right</string>
+    <string name="center">Center</string>
+    <string name="left">Left</string>
+    <string name="down_backward">Down/Backward</string>
+    <string name="portrait">portrait</string>
+    <string name="landscape_left">landscape left</string>
+    <string name="landscape_right">Landscape right</string>
+    <string name="protocol">Protocol:</string>
     <string-array name="protocol_select_spinner">
         <item>Simply Text</item>
         <item>GoBLE</item>
