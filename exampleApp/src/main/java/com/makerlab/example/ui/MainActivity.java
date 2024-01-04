@@ -1,5 +1,6 @@
 package com.makerlab.example.ui;
 
+import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -11,13 +12,13 @@ import android.view.View;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.Toolbar;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
 
 import com.makerlab.bt.BluetoothConnect;
-import com.makerlab.bt.BluetoothScan;
-import com.makerlab.ui.BluetoothDevListActivity;
+import com.makerlab.ui.BluetoothActivity;
 
 public class MainActivity extends AppCompatActivity implements
         BluetoothConnect.ConnectionHandler {
@@ -27,8 +28,7 @@ public class MainActivity extends AppCompatActivity implements
     static private String LOG_TAG = MainActivity.class.getSimpleName();
 
     private BluetoothConnect mBluetoothConnect;
-    private BluetoothScan mBluetoothScan;
-
+    private BluetoothDevice mBluetoothDevice;
     private Menu mMenuSetting;
     private SharedPreferences mSharedPref;
     private String mSharedPrefFile = "com.makerlab.omni.sharedprefs";
@@ -39,6 +39,9 @@ public class MainActivity extends AppCompatActivity implements
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        Toolbar toolbar = findViewById(R.id.toolbar_main);
+        setSupportActionBar(toolbar);
+
         mBluetoothConnect = new BluetoothConnect(this);
         mBluetoothConnect.setConnectionHandler(this);
 
@@ -46,9 +49,9 @@ public class MainActivity extends AppCompatActivity implements
         String bluetothDeviceAddr = mSharedPref.getString(BLUETOOT_REMOTE_DEVICE, null);
         if (bluetothDeviceAddr != null) {
             //Log.e(LOG_TAG, "onCreate(): found share perference");
-            mBluetoothScan = new BluetoothScan(this);
-            BluetoothDevice mBluetoothDevice = mBluetoothScan.getBluetoothDevice(bluetothDeviceAddr);
-            mBluetoothConnect.connectBluetooth(mBluetoothDevice);
+            BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+            mBluetoothDevice = bluetoothAdapter.getRemoteDevice(bluetothDeviceAddr);
+            mBluetoothConnect.connect(mBluetoothDevice);
             if (D)
                 Log.e(LOG_TAG, "onCreate() - connecting bluetooth device");
         } else {
@@ -81,15 +84,15 @@ public class MainActivity extends AppCompatActivity implements
     public boolean onOptionsItemSelected(MenuItem item) {
         if (item.getItemId() == R.id.action_bluetooth_scan) {
             if (mBluetoothConnect.isConnected()) {
-                mBluetoothConnect.disconnectBluetooth();
+                mBluetoothConnect.disconnect();
             }
-            Intent intent = new Intent(this, BluetoothDevListActivity.class);
+            Intent intent = new Intent(this, BluetoothActivity.class);
             startActivityForResult(intent, REQUEST_BT_GET_DEVICE);
             return true;
         }
 
         if (item.getItemId() == R.id.action_bluetooth_disconnect) {
-            mBluetoothConnect.disconnectBluetooth();
+            mBluetoothConnect.disconnect();
             closeControlFragment();
             enableConnectMenuItem(true);
             removeSharePerf();
@@ -105,9 +108,9 @@ public class MainActivity extends AppCompatActivity implements
 
         if (requestCode == REQUEST_BT_GET_DEVICE) {
             if (resultCode == RESULT_OK) {
-                BluetoothDevice bluetoothDevice = resultIntent.getParcelableExtra(BluetoothDevListActivity.EXTRA_KEY_DEVICE);
-                if (bluetoothDevice != null) {
-                    mBluetoothConnect.connectBluetooth(bluetoothDevice);
+                mBluetoothDevice = resultIntent.getParcelableExtra("device");
+                if (mBluetoothDevice != null) {
+                    mBluetoothConnect.connect(mBluetoothDevice);
                     if (D)
                         Log.e(LOG_TAG, "onActivityResult() - connecting");
                 }
@@ -121,7 +124,7 @@ public class MainActivity extends AppCompatActivity implements
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        mBluetoothConnect.disconnectBluetooth();
+        mBluetoothConnect.disconnect();
         if (D)
             Log.e(LOG_TAG, "onDestroy()");
     }
@@ -130,38 +133,7 @@ public class MainActivity extends AppCompatActivity implements
         return mBluetoothConnect;
     }
 
-    @Override
-    public void onConnect(BluetoothConnect instant) {
-        runOnUiThread(new Thread() {
-            public void run() {
-                Toast.makeText(getApplicationContext(), "Connecting", Toast.LENGTH_SHORT).show();
-            }
-        });
-        if (D)
-            Log.e(LOG_TAG, "onConnect() - Connecting");
-    }
-
-    @Override
-    public void onConnectionSuccess(BluetoothConnect instant) {
-        SharedPreferences.Editor preferencesEditor = mSharedPref.edit();
-        preferencesEditor.putString(BLUETOOT_REMOTE_DEVICE, mBluetoothConnect.getDeviceAddress());
-        preferencesEditor.apply();
-        if (D)
-            Log.e(LOG_TAG, "onConnectionSuccess() - connected");
-        runOnUiThread(new Thread() {
-            public void run() {
-                runOnUiThread(new Thread() {
-                    public void run() {
-                        Toast.makeText(getApplicationContext(), "Connected", Toast.LENGTH_SHORT).show();
-                        if (mMenuSetting != null) {
-                            enableConnectMenuItem(false);
-                        }
-                        displayControlFragment();
-                    }
-                });
-            }
-        });
-    }
+/*
 
     @Override
     public void onConnectionFail(BluetoothConnect instant) {
@@ -182,19 +154,8 @@ public class MainActivity extends AppCompatActivity implements
             }
         });
     }
+*/
 
-    @Override
-    public void onDisconnected(BluetoothConnect instant) {
-        runOnUiThread(new Thread() {
-            public void run() {
-                Toast.makeText(getApplicationContext(), "Disconnected!", Toast.LENGTH_LONG).show();
-                closeControlFragment();
-                enableConnectMenuItem(true);
-            }
-        });
-        if (D)
-            Log.e(LOG_TAG, "onDisconnected()");
-    }
 
     private void removeSharePerf() {
         SharedPreferences.Editor preferencesEditor = mSharedPref.edit();
@@ -228,4 +189,38 @@ public class MainActivity extends AppCompatActivity implements
         view.setVisibility(View.VISIBLE);
     }
 
+    @Override
+    public void onDisconnected() {
+        runOnUiThread(new Thread() {
+            public void run() {
+                Toast.makeText(getApplicationContext(), "Disconnected!", Toast.LENGTH_LONG).show();
+                closeControlFragment();
+                enableConnectMenuItem(true);
+            }
+        });
+        if (D)
+            Log.e(LOG_TAG, "onDisconnected()");
+    }
+
+    @Override
+    public void onConnected() {
+        SharedPreferences.Editor preferencesEditor = mSharedPref.edit();
+        preferencesEditor.putString(BLUETOOT_REMOTE_DEVICE, mBluetoothDevice.getAddress());
+        preferencesEditor.apply();
+        if (D)
+            Log.e(LOG_TAG, "onConnectionSuccess() - connected");
+        runOnUiThread(new Thread() {
+            public void run() {
+                runOnUiThread(new Thread() {
+                    public void run() {
+                        Toast.makeText(getApplicationContext(), "Connected", Toast.LENGTH_SHORT).show();
+                        if (mMenuSetting != null) {
+                            enableConnectMenuItem(false);
+                        }
+                        displayControlFragment();
+                    }
+                });
+            }
+        });
+    }
 }

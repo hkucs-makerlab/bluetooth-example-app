@@ -1,5 +1,6 @@
 package com.makerlab.bt;
 
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
@@ -12,128 +13,223 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.os.AsyncTask;
-import android.os.ParcelUuid;
+import android.os.Build;
 import android.util.Log;
 
+import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.Serializable;
 import java.util.Arrays;
+import java.util.LinkedList;
 import java.util.UUID;
 
 public class BluetoothConnect implements Serializable {
-    static private String LOG_TAG = BluetoothConnect.class.getSimpleName();
+    private static final String LOG_TAG =
+            BluetoothConnect.class.getSimpleName();
+    private Activity mActivity;
+
     //
     private BluetoothDevice mBluetoothDevice;
-    // Bluetooth LE
+    private BluetoothSocket mBluetoothSocket;
     private BluetoothGatt mBluetoothGatt = null;
     private BluetoothGattCharacteristic mGattCharacteristic = null;
-    // classic Bluetooth SPP
-    private BluetoothSocket mBluetoothSocket = null;
+    private BluetoothGattCallback mGattCallback;
     private OutputStream mOutputStream;
-
-    private Activity mActivity;
-    //
-    private int mPrevChecksum = -1;
-    private DisonnectedState mDisonnectedState;
+    private ConnectionStateCallback mConnectionStateCallback;
     private ConnectionHandler mConnectionHandler;
-    private boolean mIsConnected = false;
-    private BluetoothConnect self;
-
-
+    private BufferedReader mBufferReader;
+    public String mErrorString = "";
+    private ByteArrayOutputStream mOutputByteStream;
     public BluetoothConnect(Activity activity) {
         mActivity = activity;
-        self = this;
+        mConnectionStateCallback = new ConnectionStateCallback();
+        mGattCallback = new BluetoothGattCallback();
+        mOutputByteStream = new ByteArrayOutputStream();
+        mConnectionHandler = null;
+
+    }
+
+    public boolean setDevice(String address) {
+        BluetoothDevice device = BluetoothAdapter.getDefaultAdapter().getRemoteDevice(address);
+        if (device == null) return false;
+        setDevice(device);
+        return true;
+    }
+
+    public void setDevice(BluetoothDevice device) {
+        mBluetoothDevice = device;
     }
 
     public void setConnectionHandler(ConnectionHandler mConnectionHandler) {
         this.mConnectionHandler = mConnectionHandler;
     }
 
-    public void connectBluetooth(BluetoothDevice bluetoothDevice) {
-        if (isConnected()) return;
-        this.mBluetoothDevice = bluetoothDevice;
-        connectBluetooth();
-    }
-
-    public void connectBluetooth() {
-        BtSocketConnectAsyncTask btSocketConnectAsyncTask = new BtSocketConnectAsyncTask(mActivity, mBluetoothDevice);
-        btSocketConnectAsyncTask.execute();
-    }
-
-    public void disconnectBluetooth() {
-        if (mDisonnectedState != null) {
-            mActivity.unregisterReceiver(mDisonnectedState);
-            mDisonnectedState = null;
-        }
-
-        if (mBluetoothGatt != null) {
-            mBluetoothGatt.close();
-        }
-        mBluetoothGatt = null;
-        mGattCharacteristic = null;
-        //
-        try {
-            if (mBluetoothSocket != null) {
-                if (mOutputStream != null) {
-                    mOutputStream.close();
-                }
-                mBluetoothSocket.close();
-            }
-        } catch (IOException e) {
-            Log.e(LOG_TAG, "disconnectBluetooth(): " + e.toString());
-        } finally {
-            mBluetoothSocket = null;
-            mOutputStream = null;
-        }
-        //
-        mPrevChecksum = -1;
-        mIsConnected = false;
-    }
-
-    public String getDeviceAddress() {
-        String addr = null;
-        if (mBluetoothDevice != null) {
-            addr = mBluetoothDevice.getAddress();
-        }
-        return addr;
-    }
-
-    public String getDeviceName() {
-        String name = null;
-        if (mBluetoothDevice != null) {
-            name = mBluetoothDevice.getName();
-        }
-        return name;
-    }
-
-
+    @SuppressLint("MissingPermission")
     public boolean isConnected() {
-        return mIsConnected;
-    }
-
-    public int available() {
-        return 0;
-    }
-
-    public int read(byte[] buffer) {
-        return 0;
-    }
-
-    public boolean write(String buffer) {
-        return send(buffer.getBytes());
-    }
-
-    public boolean send(byte[] payload) {
-        if (!isConnected()) {
-            Log.d(LOG_TAG, "send(): connection not set!");
-            return false;
+        boolean flag = false;
+        if (mBluetoothDevice ==null) return false;
+        if (mBluetoothDevice.getType() == BluetoothDevice.DEVICE_TYPE_CLASSIC) {
+            flag = (mBluetoothSocket.isConnected() && mOutputStream != null);
         }
+        if (mBluetoothDevice.getType() == BluetoothDevice.DEVICE_TYPE_LE) {
+            flag = mGattCharacteristic != null;
+        }
+        return flag;
+    }
+
+    @SuppressLint("MissingPermission")
+    public void disconnect() {
+        Log.d(LOG_TAG, "disconnect() " + Build.MODEL);
+        if (mBluetoothDevice.getType() == BluetoothDevice.DEVICE_TYPE_LE) {
+            if (mBluetoothGatt != null) {
+                mBluetoothGatt.close();
+            }
+        }
+        if (mBluetoothDevice.getType() == BluetoothDevice.DEVICE_TYPE_CLASSIC) {
+            if (mOutputStream != null) {
+                try {
+                    mOutputStream.close();
+                } catch (IOException e) {
+                    Log.d(LOG_TAG, e.toString());
+                }
+            }
+            mOutputStream = null;
+            if (mBluetoothSocket != null) {
+                try {
+                    mActivity.unregisterReceiver(mConnectionStateCallback);
+                    mBluetoothSocket.close();
+                } catch (IOException e) {
+                    Log.d(LOG_TAG, e.toString());
+                }
+            }
+            mBluetoothSocket = null;
+        }
+/*        if (Build.MODEL.equals("Mi A3")) {
+            Log.d(LOG_TAG, "disconnect() - reset adapator ");
+            //if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.R) {
+            BluetoothAdapter adapter = BluetoothAdapter.getDefaultAdapter();
+            try {
+                adapter.disable();
+                Thread.sleep(1000);
+                adapter.enable();
+
+            } catch (InterruptedException e) {
+            }
+        }*/
+    }
+
+    @SuppressLint("MissingPermission")
+    public void connect() {
+
+        Thread th;
+
+        Thread ble = new Thread() {
+            public void run() {
+                Log.d(LOG_TAG, "connect() - ble");
+                mActivity.registerReceiver(mConnectionStateCallback,
+                        new IntentFilter(BluetoothDevice.ACTION_ACL_DISCONNECTED));
+                mActivity.registerReceiver(mConnectionStateCallback,
+                        new IntentFilter(BluetoothDevice.ACTION_ACL_CONNECTED));
+                mBluetoothDevice.connectGatt(mActivity, false, mGattCallback);
+            }
+        };
+        //
+        Thread classic = new Thread() {
+            @SuppressLint("MissingPermission")
+            public void run() {
+                Log.d(LOG_TAG, "connect() - spp");
+                UUID SPPuuid = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
+                try {
+                    mActivity.registerReceiver(mConnectionStateCallback,
+                            new IntentFilter(BluetoothDevice.ACTION_ACL_DISCONNECTED));
+                    mActivity.registerReceiver(mConnectionStateCallback,
+                            new IntentFilter(BluetoothDevice.ACTION_ACL_CONNECTED));
+                    mBluetoothSocket =
+                            mBluetoothDevice.createInsecureRfcommSocketToServiceRecord(SPPuuid);
+                    mBluetoothSocket.connect();
+                } catch (IOException e) {
+                    // mActivity.unregisterReceiver(mConnectionStateCallback);
+                    mBluetoothSocket = null;
+                    mErrorString = e.toString();
+                    Log.d(LOG_TAG, mErrorString);
+                }
+            }
+        };
+        if (mBluetoothDevice.getType() == BluetoothDevice.DEVICE_TYPE_CLASSIC) {
+            classic.start();
+            th = classic;
+        } else if (mBluetoothDevice.getType() == BluetoothDevice.DEVICE_TYPE_LE) {
+            ble.start();
+            th = ble;
+        }
+        //while (th.isAlive())
+    }
+
+    public void connect(String address) {
+        if (setDevice(address)) {
+            connect();
+        }
+    }
+
+    public void connect(BluetoothDevice device) {
+        setDevice(device);
+        connect();
+    }
+
+    @SuppressLint("MissingPermission")
+    public String readLine() {
+        if (mBluetoothDevice.getType() == BluetoothDevice.DEVICE_TYPE_LE) {
+            byte[] data = mOutputByteStream.toByteArray();
+            if (data.length > 0) {
+                InputStream inputStream = new ByteArrayInputStream(data);
+                InputStreamReader inputStreamReader = new InputStreamReader(inputStream);
+                mBufferReader = new BufferedReader(inputStreamReader);
+            } else {
+                mBufferReader = null;
+            }
+        }
+        if (mBufferReader != null) {
+            try {
+                return mBufferReader.readLine();
+            } catch (IOException e) {
+            }
+        }
+        return null;
+    }
+
+    @SuppressLint("MissingPermission")
+    public boolean send(byte[] payload) {
+        //Log.d(LOG_TAG, "send()");
         if (payload == null || payload.length == 0) {
             //Log.d(LOG_TAG, "send(): invalid payload");
             return false;
         }
+        //
+        if (mBluetoothDevice.getType() == BluetoothDevice.DEVICE_TYPE_CLASSIC) {
+            if (mOutputStream == null) {
+                return false;
+            }
+            try {
+                mOutputStream.write(payload);
+                mOutputStream.flush();
+                return true;
+            } catch (IOException e) {
+                Log.d(LOG_TAG, "send(): " + e.toString());
+                return false;
+            }
+        } else if (mBluetoothDevice.getType() == BluetoothDevice.DEVICE_TYPE_LE) {
+            return sendLE(payload);
+        }
+        return false;
+    }
+
+    @SuppressLint("MissingPermission")
+    public boolean sendLE(byte[] payload) {
         boolean isSuccess = false;
         if (mGattCharacteristic != null) {
             final int maxLength = 20;
@@ -159,148 +255,36 @@ public class BluetoothConnect implements Serializable {
             int remain = payload.length % maxLength;
             if (remain > 0) {
                 to += remain;
-//                Log.e(LOG_TAG, "send(): B from "+String.valueOf(from));
-//                Log.e(LOG_TAG, "send(): B to "+String.valueOf(to));
                 buffer = Arrays.copyOfRange(payload, from, to);
-//                Log.e(LOG_TAG, "send(): B buffer length "+buffer.length);
                 mGattCharacteristic.setValue(buffer);
                 mBluetoothGatt.writeCharacteristic(mGattCharacteristic);
             }
             isSuccess = true;
-        } else if (mOutputStream != null) {
-            try {
-                mOutputStream.write(payload);
-                mOutputStream.flush();
-                isSuccess = true;
-            } catch (IOException e) {
-                Log.e(LOG_TAG, "send(): " + e.toString());
-                disconnectBluetooth();
-            }
-        } else {
-            Log.e(LOG_TAG, "send(): failed to send, GattCharacteristic or OutputStream is null!");
         }
-//        if (isSuccess) {
-//            Log.e(LOG_TAG, "send(): sent data " + new String(payload));
-//        }
-
         return isSuccess;
     }
 
 
-    //  AsyncTask
-    class BtSocketConnectAsyncTask extends AsyncTask<Void, Void, String> {
-        private Activity activity;
-        private BluetoothDevice bluetoothDevice;
-        private BluetoothGattCallback mGattCallback = new BluetoothGattCallback();
+    private class BluetoothGattCallback extends android.bluetooth.BluetoothGattCallback {
+        private String LOG_TAG = BluetoothGattCallback.class.getSimpleName();
 
-        public BtSocketConnectAsyncTask(Activity activity, BluetoothDevice bluetoothDevice) {
-            super();
-            this.activity = activity;
-            this.bluetoothDevice = bluetoothDevice;
-        }
-
-
-        @Override
-        protected void onPreExecute() {
-            super.onPreExecute();
-            if (mConnectionHandler != null) {
-                mConnectionHandler.onConnect(self);
-            }
-        }
-
-        @Override
-        protected String doInBackground(Void... voids) {
-            int btDeviceType = BluetoothDevice.DEVICE_TYPE_UNKNOWN;
-
-            btDeviceType = bluetoothDevice.getType();
-            if (btDeviceType == BluetoothDevice.DEVICE_TYPE_LE) {
-                bluetoothDevice.connectGatt(activity, false, mGattCallback);
-                return null;
-            } else if (btDeviceType == BluetoothDevice.DEVICE_TYPE_CLASSIC) {
-                if (mConnectionHandler != null) {
-                    mConnectionHandler.onConnect(self);
-                }
-                mIsConnected = connectClassicBlueTooth(bluetoothDevice);
-                if (mConnectionHandler != null) {
-                    if (mIsConnected) {
-                        mConnectionHandler.onConnectionSuccess(self);
-                    } else {
-                        mConnectionHandler.onConnectionFail(self);
-                    }
-                }
-            }
-            return null;
-        }
-
-/*
-        protected void onPostExecute(String result) {
-
-        }
-*/
-
-        private boolean connectClassicBlueTooth(BluetoothDevice bluetoothDevice) {
-            boolean rc = true;
-            try {
-                ParcelUuid[] uuids = bluetoothDevice.getUuids();
-                UUID SPPuuid;
-                if (uuids == null || uuids.length == 0) {
-                    SPPuuid = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
-                } else {
-                    SPPuuid = uuids[0].getUuid();
-                }
-                mBluetoothSocket = bluetoothDevice.createInsecureRfcommSocketToServiceRecord(SPPuuid);
-                mBluetoothSocket.connect();
-                mOutputStream = mBluetoothSocket.getOutputStream();
-                IntentFilter f2 = new IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED);
-                IntentFilter f1 = new IntentFilter(BluetoothDevice.ACTION_ACL_DISCONNECTED);
-                mDisonnectedState = new DisonnectedState();
-                mActivity.registerReceiver(mDisonnectedState, f1);
-                mActivity.registerReceiver(mDisonnectedState, f2);
-            } catch (IOException e) {
-                Log.e(LOG_TAG, "connectClassicBlueTooth(): " + e.toString());
-                //e.printStackTrace();
-                mOutputStream = null;
-                mBluetoothSocket = null;
-                rc = false;
-            }
-            return rc;
-        }
-
-    }//  AsyncTask
-
-    //
-    class BluetoothGattCallback extends android.bluetooth.BluetoothGattCallback {
+        @SuppressLint("MissingPermission")
         @Override
         public void onConnectionStateChange(BluetoothGatt gatt, int status, int newState) {
+            Log.d(LOG_TAG, "onConnectionStateChange()");
             super.onConnectionStateChange(gatt, status, newState);
             if (newState == BluetoothProfile.STATE_CONNECTED) {
                 // query the device for available GATT services,
                 // onServicesDiscovered() will be called if there are services found,
                 gatt.discoverServices();
+                Log.d(LOG_TAG, "onConnectionStateChange() : gatt STATE_CONNECTED");
             } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
-                //disconnectBluetooth();
+                Log.d(LOG_TAG, "onConnectionStateChange() : gatt STATE_DISCONNECTED");
             }
         }
 
-        @Override
-        public void onServicesDiscovered(BluetoothGatt gatt, int status) {
-            super.onServicesDiscovered(gatt, status);
-            if (status == BluetoothGatt.GATT_SUCCESS) {
-                bindServiceAndCharacteristics(gatt);
-                Log.e(LOG_TAG, "onServicesDiscovered()");
-            }
-        }
-
-        // called if receiving data
-        @Override
-        public void onCharacteristicChanged(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic) {
-            super.onCharacteristicChanged(gatt, characteristic);
-            byte[] buff = characteristic.getValue();
-            //Log.e("onCharacteristicChanged", "recevied: " + buff.length);
-            // An updated value has been received for a characteristic.
-        }
-
-        private void bindServiceAndCharacteristics(BluetoothGatt gatt) {
+        @SuppressLint("MissingPermission")
+        private BluetoothGattCharacteristic bindServiceAndCharacteristics(BluetoothGatt gatt) {
             String serviceUuid[] = {
                     "0000ffe0-0000-1000-8000-00805f9b34fb",
                     "0000dfb0-0000-1000-8000-00805f9b34fb"
@@ -309,87 +293,123 @@ public class BluetoothConnect implements Serializable {
                     "0000ffe1-0000-1000-8000-00805f9b34fb",
                     "0000dfb1-0000-1000-8000-00805f9b34fb"
             };
-            mIsConnected = false;
             BluetoothGattService gattService = null;
+            BluetoothGattCharacteristic gattCharacteristic = null;
             int i = 0;
             for (i = 0; i < serviceUuid.length; i++) {
                 gattService = gatt.getService(UUID.fromString(serviceUuid[i]));
                 if (gattService != null) break;
             }
             if (gattService == null) {
-                gatt.close();
-                if (mConnectionHandler != null) {
-                    mConnectionHandler.onConnectionFail(self);
-                }
-                return;
+                return gattCharacteristic;
             }
-
-            mGattCharacteristic = gattService.getCharacteristic(UUID.fromString(charUuid[i]));
-            if (mGattCharacteristic == null) {
-                gatt.close();
-                if (mConnectionHandler != null) {
-                    mConnectionHandler.onConnectionFail(self);
+/*
+            for (BluetoothGattService gattService : gatt.getServices()) {
+                Log.e("onServicesDiscovered", "Service: " + gattService.getUuid());
+                for (BluetoothGattCharacteristic characteristic : gattService.getCharacteristics()) {
+                    Log.e("onServicesDiscovered", "Characteristic: " + characteristic.getUuid());
+                    for (BluetoothGattDescriptor descriptor : characteristic.getDescriptors()) {
+                        Log.e("onServicesDiscovered", "descriptor: " + descriptor.getValue().toString());
+                    }
                 }
-                return;
             }
+            */
+            gattCharacteristic = gattService.getCharacteristic(UUID.fromString(charUuid[i]));
+            if (gattCharacteristic != null) {
+                // turn on data receiving event for the characteristic
+                gatt.setCharacteristicNotification(gattCharacteristic, true);
+            }
+            Log.d(LOG_TAG, "bindServiceAndCharacteristics() - getCharacteristic ");
+            return gattCharacteristic;
+        }
 
-            // turn on data receiving event for the characteristic
-            gatt.setCharacteristicNotification(mGattCharacteristic, true);
-            //
-            mBluetoothGatt = gatt;
-            mIsConnected = true;
-            //
-            IntentFilter f2 = new IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED);
-            IntentFilter f1 = new IntentFilter(BluetoothDevice.ACTION_ACL_DISCONNECTED);
-            mDisonnectedState = new DisonnectedState();
-            mActivity.registerReceiver(mDisonnectedState, f1);
-            mActivity.registerReceiver(mDisonnectedState, f2);
-            //
-            if (mConnectionHandler != null) {
-                mConnectionHandler.onConnectionSuccess(self);
+        @SuppressLint("MissingPermission")
+        @Override
+        public void onServicesDiscovered(BluetoothGatt gatt, int status) {
+            super.onServicesDiscovered(gatt, status);
+            if (status == BluetoothGatt.GATT_SUCCESS) {
+                mGattCharacteristic = bindServiceAndCharacteristics(gatt);
+                if (mGattCharacteristic == null) {
+                    gatt.close();
+                    Log.d(LOG_TAG, "onServicesDiscovered() : no service/characteristic found!");
+                } else {
+                    mBluetoothGatt = gatt;
+                    Log.d(LOG_TAG, "onServicesDiscovered() : service/characteristic found!");
+                }
+                Log.d(LOG_TAG, "onServicesDiscovered() : GATT SUCCESS");
+            } else {
+                Log.d(LOG_TAG, "onServicesDiscovered() : GATT FAILURE");
             }
         }
 
-    }
+        // called if receiving data
+        // An updated value has been received for a characteristic.
+        @Override
+        public void onCharacteristicChanged(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic) {
+            super.onCharacteristicChanged(gatt, characteristic);
+            byte[] buff = characteristic.getValue();
+            synchronized (mOutputByteStream) {
+                try {
+                    mOutputByteStream.write(buff);
+                } catch (IOException e) {
+                }
+            }
+            Log.d(LOG_TAG, "onCharacteristicChanged(): receive data length " + buff.length);
+        }
 
-    // broadcast receiver for bluetooth disconnect
-    private class DisonnectedState extends BroadcastReceiver {
-        private final String LOG_TAG = DisonnectedState.class.getSimpleName();
 
+    } // class BluetoothGattCallback
+
+    // connect and disconnect events
+    private class ConnectionStateCallback extends BroadcastReceiver {
+        //private final String LOG_TAG = ConnectionStateCallback.class.getSimpleName();
+        @SuppressLint("MissingPermission")
         @Override
         public void onReceive(Context context, Intent intent) {
             final String action = intent.getAction();
-            if (action == null) return;
             if (action.equals(BluetoothDevice.ACTION_ACL_DISCONNECTED)) {
-                //Log.e(LOG_TAG, "onReceive() : device disconnected");
-                if (mConnectionHandler != null) {
-                    mConnectionHandler.onDisconnected(self);
-                    disconnectBluetooth();
+                Log.d(LOG_TAG, "ConnectionStateCallback : device disconnected");
+                if (mBluetoothDevice.getType() == BluetoothDevice.DEVICE_TYPE_LE) {
+                    mBluetoothGatt = null;
+                    mGattCharacteristic = null;
                 }
-            } else if (action.equals(BluetoothAdapter.ACTION_STATE_CHANGED)) {
-                //Log.e(LOG_TAG, "onReceive() : adaptor state changed");
-                final int state = intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, BluetoothAdapter.ERROR);
-                switch (state) {
-                    case BluetoothAdapter.STATE_OFF:
-                        if (mConnectionHandler != null) {
-                            mConnectionHandler.onDisconnected(self);
-                            disconnectBluetooth();
+                if (mBluetoothDevice.getType() == BluetoothDevice.DEVICE_TYPE_CLASSIC) {
+                    mBluetoothSocket = null;
+                    mOutputStream = null;
+                }
+                if (mConnectionHandler != null)
+                    mConnectionHandler.onDisconnected();
+            } else if (action.equals(BluetoothDevice.ACTION_ACL_CONNECTED)) {
+                Log.d(LOG_TAG, "ConnectionStateCallback : device Connected");
+                //
+                if (mBluetoothDevice.getType() == BluetoothDevice.DEVICE_TYPE_LE) {
+                    if (mConnectionHandler != null)
+                        mConnectionHandler.onConnected();
+                }
+                //
+                if (mBluetoothDevice.getType() == BluetoothDevice.DEVICE_TYPE_CLASSIC) {
+                    try {
+                        if (mBluetoothSocket == null) {
+                            return;
                         }
-                        break;
-                    case BluetoothAdapter.STATE_ON:
-                        break;
+                        mOutputStream = mBluetoothSocket.getOutputStream();
+                        mBufferReader = new BufferedReader(new InputStreamReader(mBluetoothSocket.getInputStream()));
+                        if (mConnectionHandler != null)
+                            mConnectionHandler.onConnected();
+                    } catch (IOException e) {
+                        mBluetoothSocket = null;
+                        mOutputStream = null;
+                        mBufferReader = null;
+                        Log.d(LOG_TAG, e.toString());
+                    }
                 }
             }
         }
-    }
+    } // class ConnectionStateCallback
 
     public interface ConnectionHandler {
-        void onConnect(BluetoothConnect self);
+        void onConnected();
 
-        void onConnectionSuccess(BluetoothConnect self);
-
-        void onConnectionFail(BluetoothConnect self);
-
-        void onDisconnected(BluetoothConnect self);
+        void onDisconnected();
     }
 }

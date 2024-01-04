@@ -10,7 +10,7 @@
         android:theme="@style/AppTheme">
 
         <activity
-            android:name="com.makerlab.ui.BluetoothDevListActivity"
+            android:name="com.makerlab.ui.BluetoothActivity"
             android:label="Scanning Bluetooth Devices"
             android:parentActivityName="MainActivity">
             <meta-data
