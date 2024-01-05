@@ -16,12 +16,11 @@ This app is for the tutorial of writing an Android app using BlueTooth. It is wr
 * using BlueTooth SPP and BLE API
 * using Log for debugging - android studio logcat
 
-### Prerequisites:
+### Exercises:
 If you don't have any background on Android app development, you should complete the exercises of following tutorials before to study the code
 
 * [Constraint Layout Codelab](https://github.com/hkucs-makerlab/constraint-layout)
-* [Codelabs for Android Developer Fundamentals](https://developer.android.com/courses/fundamentals-training/toc-v2)
-* [Codelabs for Advanced Android Development](https://developer.android.com/courses/advanced-training/toc)
+
 
 
 ### References for Android BlueTooth API:
